@@ -1,8 +1,8 @@
 
 from invisible_cities.io.dst_io              import load_dst
-from event_model_2   import Hit
-from event_model_2   import Cluster
-from event_model_2   import HitCollection
+from invisible_cities.evm.event_model_2   import Hit
+from invisible_cities.evm.event_model_2   import Cluster
+from invisible_cities.evm.event_model_2   import HitCollection
 from invisible_cities.types.ic_types     import xy
 from invisible_cities.io.table_io           import make_table
 from invisible_cities.evm .nh5           import HitsTable
@@ -33,6 +33,12 @@ def load_hits(DST_file_name):
 
     Xpeak = getattr(dst, 'Xpeak', [-1000] * dst_size)
     Ypeak = getattr(dst, 'Ypeak', [-1000] * dst_size)
+    
+    try:
+        Xpeak = Xpeak.values
+        Ypeak = Ypeak.values
+    except:
+        pass
 
     for i in range(dst_size):
         current_event = all_events.setdefault(event[i],
@@ -68,6 +74,14 @@ def load_hits_skipping_NN(DST_file_name):
 
     Xpeak = getattr(dst, 'Xpeak', [-1000] * dst_size)
     Ypeak = getattr(dst, 'Ypeak', [-1000] * dst_size)
+
+
+    try:
+        Xpeak = Xpeak.values
+        Ypeak = Ypeak.values
+    except:
+        pass
+
 
     for i in range(dst_size):
         current_event = all_events.setdefault(event[i],
