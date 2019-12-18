@@ -120,18 +120,20 @@ def find_peaks(ccwfs, index,
                Pk, pmt_ids,
                pmt_sample_f =25*units.ns,
                sipm_sample_f= 1*units.mus,
-               sipm_wfs=None, thr_sipm_s2=0):
+               sipm_wfs=None, thr_sipm_s2=0,
+               times_vect = None):
     ccwfs = np.array(ccwfs, ndmin=2)
 
     peaks           = []
-    times           = np.arange     (ccwfs.shape[1]) * pmt_sample_f
+    if not times_vect:
+        times_vect  = np.arange     (ccwfs.shape[1]) * pmt_sample_f
     widths          = np.full       (ccwfs.shape[1],   pmt_sample_f)
     indices_split   = split_in_peaks(index, stride)
     selected_splits = select_peaks  (indices_split, time, length, pmt_sample_f)
     with_sipms      = Pk is S2 and sipm_wfs is not None
 
     for indices in selected_splits:
-        pk = build_peak(indices, times,
+        pk = build_peak(indices, times_vect,
                         widths, ccwfs, pmt_ids,
                         rebin_stride,
                         with_sipms, Pk,
