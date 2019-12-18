@@ -177,3 +177,19 @@ def rebin_times_and_waveforms(times, widths, waveforms,
         rebinned_widths[   i] = np.sum    (   widths[s])
         rebinned_wfs   [:, i] = np.sum    (e,    axis=1)
     return rebinned_times, rebinned_widths, rebinned_wfs
+
+
+def rebin_wf(pmt_sample_f, rebin_stride):
+    def create_times_widths_and_rebin(wf):
+        times  = np.arange(wf.shape[1]) * pmt_sample_f
+        widths = np.full  (wf.shape[1],   pmt_sample_f)
+        rebinned_parameters = rebin_times_and_waveforms(times,
+                                                        widths,
+                                                        wf,
+                                                        rebin_stride)
+        rebinned_times  = rebinned_parameters[0]
+        rebinned_widths = rebinned_parameters[1]
+        rebinned_wfs    = rebinned_parameters[2]
+        return rebinned_times, rebinned_widths, rebinned_wfs
+
+    return create_times_widths_and_rebin

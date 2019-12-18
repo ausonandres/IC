@@ -84,6 +84,11 @@ def irene(files_in, file_out, compression, event_range, print_mod, detector_db, 
                               args = ("cwf_sum", "cwf_sum_mau"),
                               out  = ("s1_indices", "s2_indices", "s2_energies"))
 
+    # Possibility to rebin waveforms before searching peaks
+    first_rebin      = fl.map(pkf.rebin_wf(pmt_sample_f, s2_rebin_stride),
+                              args = ("cwf"),
+                              out  = ("rebinned_times", "rebinned_widths", "rebinned_wfs"))
+
     # Remove baseline and calibrate SiPMs
     sipm_rwf_to_cal  = fl.map(calibrate_sipms(detector_db, run_number, sipm_thr),
                               item = "sipm")
@@ -132,6 +137,7 @@ def irene(files_in, file_out, compression, event_range, print_mod, detector_db, 
                                 print_every(print_mod),
                                 event_count_in.spy,
                                 rwf_to_cwf,
+                                first_rebin,
                                 cwf_to_ccwf,
                                 zero_suppress,
                                 indices_pass,
