@@ -157,6 +157,27 @@ def get_pmap(ccwf, s1_indx, s2_indx, sipm_zs_wf,
                            **s2_params))
 
 
+def get_diff_pmaps(ccwf_s1, ccwf_s2, s1_indx, s2_indx, sipm_zs_wf,
+             s1_params, s2_params, thr_sipm_s2, pmt_ids,
+             pmt_sample_f, sipm_sample_fn, rebinned_times):
+
+    #if rebinned_times:
+    s2_params['length'] = s2_params['length'] / s2_params['rebin_stride']
+    s2_rebinned_f = pmt_sample_f * s2_params['rebin_stride']
+    s2_params['rebin_stride'] = s2_params['rebin_stride'] / s2_rebinned
+
+    return PMap(find_peaks(ccwf_s1, s1_indx, Pk=S1, pmt_ids=pmt_ids,
+                           pmt_sample_f=pmt_sample_f,
+                           **s1_params),
+                find_peaks(ccwf_s2, s2_indx, Pk=S2, pmt_ids=pmt_ids,
+                           sipm_wfs    = sipm_zs_wf,
+                           thr_sipm_s2 = thr_sipm_s2,
+                           pmt_sample_f  = pmt_sample_f,
+                           sipm_sample_f = sipm_sample_f,
+                           times_vect    = rebinned_times,
+                           **s2_params))
+
+
 def rebin_times_and_waveforms(times, widths, waveforms,
                               rebin_stride=2, slices=None):
     if rebin_stride < 2: return times, widths, waveforms
