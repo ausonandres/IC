@@ -86,7 +86,7 @@ def irene(files_in, file_out, compression, event_range, print_mod, detector_db, 
 
     # Find where waveform is above threshold
     zero_suppress    = fl.map(zero_suppress_wfs(thr_csum_s1, thr_csum_s2),
-                              args = ("cwf_sum", "cwf_sum_mau"),
+                              args = ("cwf_sum_rb", "cwf_sum_mau"),
                               out  = ("s1_indices", "s2_indices", "s2_energies"))
 
     # Possibility to rebin waveforms before searching peaks
