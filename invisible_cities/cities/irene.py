@@ -74,10 +74,15 @@ def irene(files_in, file_out, compression, event_range, print_mod, detector_db, 
                               args = "pmt",
                               out  = "cwf")
 
-    # Corrected WaveForm to Calibrated Corrected WaveForm
+    # Corrected WaveForm to Calibrated Corrected WaveForm for S1
     cwf_to_ccwf      = fl.map(calibrate_pmts(detector_db, run_number, n_mau, thr_mau),
                               args = "cwf",
                               out  = ("ccwfs", "ccwfs_mau", "cwf_sum", "cwf_sum_mau"))
+
+    # Corrected WaveForm to Calibrated Corrected WaveForm for S2 (after rebinning)
+    cwf_to_ccwf_rb   = fl.map(calibrate_pmts(detector_db, run_number, n_mau, thr_mau),
+                              args = "rebinned_wfs",
+                              out  = ("ccwfs_rb", "ccwfs_mau_rb", "cwf_sum_rb", "cwf_sum_mau_rb"))
 
     # Find where waveform is above threshold
     zero_suppress    = fl.map(zero_suppress_wfs(thr_csum_s1, thr_csum_s2),
@@ -139,6 +144,7 @@ def irene(files_in, file_out, compression, event_range, print_mod, detector_db, 
                                 rwf_to_cwf,
                                 first_rebin,
                                 cwf_to_ccwf,
+                                cwf_to_ccwf_rb,
                                 zero_suppress,
                                 indices_pass,
                                 fl.branch(write_indx_filter),
