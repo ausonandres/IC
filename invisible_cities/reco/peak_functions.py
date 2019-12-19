@@ -125,7 +125,7 @@ def find_peaks(ccwfs, index,
     ccwfs = np.array(ccwfs, ndmin=2)
 
     peaks           = []
-    if not times_vect:
+    if not np.array(times_vect).sum():
         times_vect  = np.arange     (ccwfs.shape[1]) * pmt_sample_f
     widths          = np.full       (ccwfs.shape[1],   pmt_sample_f)
     indices_split   = split_in_peaks(index, stride)
@@ -159,12 +159,12 @@ def get_pmap(ccwf, s1_indx, s2_indx, sipm_zs_wf,
 
 def get_diff_pmaps(ccwf_s1, ccwf_s2, s1_indx, s2_indx, sipm_zs_wf,
              s1_params, s2_params, thr_sipm_s2, pmt_ids,
-             pmt_sample_f, sipm_sample_fn, rebinned_times):
+             pmt_sample_f, sipm_sample_f, rebinned_times):
 
     #if rebinned_times:
-    s2_params['length'] = s2_params['length'] / s2_params['rebin_stride']
+    #s2_params['length'] = s2_params['length'] / s2_params['rebin_stride']
     s2_rebinned_f = pmt_sample_f * s2_params['rebin_stride']
-    s2_params['rebin_stride'] = s2_params['rebin_stride'] / s2_rebinned
+    #s2_params['rebin_stride'] = 1
 
     return PMap(find_peaks(ccwf_s1, s1_indx, Pk=S1, pmt_ids=pmt_ids,
                            pmt_sample_f=pmt_sample_f,
@@ -172,10 +172,13 @@ def get_diff_pmaps(ccwf_s1, ccwf_s2, s1_indx, s2_indx, sipm_zs_wf,
                 find_peaks(ccwf_s2, s2_indx, Pk=S2, pmt_ids=pmt_ids,
                            sipm_wfs    = sipm_zs_wf,
                            thr_sipm_s2 = thr_sipm_s2,
-                           pmt_sample_f  = pmt_sample_f,
+                           pmt_sample_f  = s2_rebinned_f,
                            sipm_sample_f = sipm_sample_f,
                            times_vect    = rebinned_times,
-                           **s2_params))
+                           time          = s2_params['time'],
+                           length        = s2_params['length'],#/s2_params['rebin_stride'],
+                           stride        = s2_params['stride'],
+                           rebin_stride  = 1))
 
 
 def rebin_times_and_waveforms(times, widths, waveforms,

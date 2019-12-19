@@ -99,10 +99,11 @@ def irene(files_in, file_out, compression, event_range, print_mod, detector_db, 
                               item = "sipm")
 
     # Build the PMap
-    compute_pmap     = fl.map(build_pmap(detector_db, run_number, pmt_sample_f, sipm_sample_f,
-                                         s1_lmax, s1_lmin, s1_rebin_stride, s1_stride, s1_tmax, s1_tmin,
-                                         s2_lmax, s2_lmin, s2_rebin_stride, s2_stride, s2_tmax, s2_tmin, thr_sipm_s2),
-                              args = ("ccwfs", "s1_indices", "s2_indices", "sipm"),
+    compute_pmap     = fl.map(build_pmaps(detector_db, run_number, pmt_sample_f, sipm_sample_f,
+                                          s1_lmax, s1_lmin, s1_rebin_stride, s1_stride, s1_tmax, s1_tmin,
+                                          s2_lmax, s2_lmin, s2_rebin_stride, s2_stride, s2_tmax, s2_tmin,
+                                          thr_sipm_s2),
+                              args = ("ccwfs", "ccwfs_rb", "s1_indices", "s2_indices", "sipm", "rebinned_times"),
                               out  = "pmap")
 
     ### Define data filters
@@ -192,6 +193,35 @@ def build_pmap(detector_db, run_number, pmt_sample_f, sipm_sample_f,
                             pmt_sample_f, sipm_sample_f)
 
     return build_pmap
+
+
+def build_pmaps(detector_db, run_number, pmt_sample_f, sipm_sample_f,
+                s1_lmax, s1_lmin, s1_rebin_stride, s1_stride, s1_tmax, s1_tmin,
+                s2_lmax, s2_lmin, s2_rebin_stride, s2_stride, s2_tmax, s2_tmin,
+                thr_sipm_s2):
+    s1_params = dict(time        = minmax(min = s1_tmin,
+                                          max = s1_tmax),
+                    length       = minmax(min = s1_lmin,
+                                          max = s1_lmax),
+                    stride       = s1_stride,
+                    rebin_stride = s1_rebin_stride)
+
+    s2_params = dict(time        = minmax(min = s2_tmin,
+                                          max = s2_tmax),
+                    length       = minmax(min = s2_lmin,
+                                          max = s2_lmax),
+                    stride       = s2_stride,
+                    rebin_stride = s2_rebin_stride)
+
+    datapmt = load_db.DataPMT(detector_db, run_number)
+    pmt_ids = datapmt.SensorID[datapmt.Active.astype(bool)].values
+
+    def build_pmaps(ccwf_s1, ccwf_s2, s1_indx, s2_indx, sipmzs, rebinned_times): # -> PMap
+        return pkf.get_diff_pmaps(ccwf_s1, ccwf_s2, s1_indx, s2_indx, sipmzs,
+                                  s1_params, s2_params, thr_sipm_s2, pmt_ids,
+                                  pmt_sample_f, sipm_sample_f, rebinned_times)
+
+    return build_pmaps
 
 
 def get_number_of_active_pmts(detector_db, run_number):
