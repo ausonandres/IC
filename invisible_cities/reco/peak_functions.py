@@ -159,22 +159,28 @@ def get_pmap(ccwf, s1_indx, s2_indx, sipm_zs_wf,
 
 def get_diff_pmaps(ccwf_s1, ccwf_s2, s1_indx, s2_indx, sipm_zs_wf,
              s1_params, s2_params, thr_sipm_s2, pmt_ids,
-             pmt_sample_f, sipm_sample_f, rebinned_times):
+             pmt_sample_f, sipm_sample_f, rebinned_s1_times, rebinned_s2_times):
 
     #if rebinned_times:
     #s2_params['length'] = s2_params['length'] / s2_params['rebin_stride']
+    s1_rebinned_f = pmt_sample_f * s1_params['rebin_stride']
     s2_rebinned_f = pmt_sample_f * s2_params['rebin_stride']
     #s2_params['rebin_stride'] = 1
 
     return PMap(find_peaks(ccwf_s1, s1_indx, Pk=S1, pmt_ids=pmt_ids,
-                           pmt_sample_f=pmt_sample_f,
-                           **s1_params),
+                           pmt_sample_f  = s1_rebinned_f,
+                           sipm_sample_f = sipm_sample_f,
+                           times_vect    = rebinned_s1_times,
+                           time          = s1_params['time'],
+                           length        = s1_params['length'],#/s2_params['rebin_stride'],
+                           stride        = s1_params['stride'],
+                           rebin_stride  = 1),
                 find_peaks(ccwf_s2, s2_indx, Pk=S2, pmt_ids=pmt_ids,
                            sipm_wfs    = sipm_zs_wf,
                            thr_sipm_s2 = thr_sipm_s2,
                            pmt_sample_f  = s2_rebinned_f,
                            sipm_sample_f = sipm_sample_f,
-                           times_vect    = rebinned_times,
+                           times_vect    = rebinned_s2_times,
                            time          = s2_params['time'],
                            length        = s2_params['length'],#/s2_params['rebin_stride'],
                            stride        = s2_params['stride'],

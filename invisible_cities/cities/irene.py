@@ -80,19 +80,25 @@ def irene(files_in, file_out, compression, event_range, print_mod, detector_db, 
                               out  = ("ccwfs", "ccwfs_mau", "cwf_sum", "cwf_sum_mau"))
 
     # Corrected WaveForm to Calibrated Corrected WaveForm for S2 (after rebinning)
-    cwf_to_ccwf_rb   = fl.map(calibrate_pmts(detector_db, run_number, n_mau, thr_mau),
-                              args = "rebinned_wfs",
-                              out  = ("ccwfs_rb", "ccwfs_mau_rb", "cwf_sum_rb", "cwf_sum_mau_rb"))
+    cwf_to_ccwf_s1rb = fl.map(calibrate_pmts(detector_db, run_number, n_mau, thr_mau),
+                              args = "rebinned_s1_wfs",
+                              out  = ("s1_ccwfs_rb", "s1_ccwfs_mau_rb", "s1_cwf_sum_rb", "s1_cwf_sum_mau_rb"))
+    cwf_to_ccwf_s2rb = fl.map(calibrate_pmts(detector_db, run_number, n_mau, thr_mau),
+                              args = "rebinned_s2_wfs",
+                              out  = ("s2_ccwfs_rb", "s2_ccwfs_mau_rb", "s2_cwf_sum_rb", "s2_cwf_sum_mau_rb"))
 
     # Find where waveform is above threshold
     zero_suppress    = fl.map(zero_suppress_wfs(thr_csum_s1, thr_csum_s2),
-                              args = ("cwf_sum_rb", "cwf_sum_mau"),
+                              args = ("s2_cwf_sum_rb", "s1_cwf_sum_mau_rb"),
                               out  = ("s1_indices", "s2_indices", "s2_energies"))
 
     # Possibility to rebin waveforms before searching peaks
-    first_rebin      = fl.map(pkf.rebin_wf(pmt_sample_f, s2_rebin_stride),
+    s1_rebin         = fl.map(pkf.rebin_wf(pmt_sample_f, s1_rebin_stride),
                               args = ("cwf"),
-                              out  = ("rebinned_times", "rebinned_widths", "rebinned_wfs"))
+                              out  = ("rebinned_s1_times", "rebinned_s1_widths", "rebinned_s1_wfs"))
+    s2_rebin         = fl.map(pkf.rebin_wf(pmt_sample_f, s2_rebin_stride),
+                              args = ("cwf"),
+                              out  = ("rebinned_s2_times", "rebinned_s2_widths", "rebinned_s2_wfs"))
 
     # Remove baseline and calibrate SiPMs
     sipm_rwf_to_cal  = fl.map(calibrate_sipms(detector_db, run_number, sipm_thr),
@@ -103,7 +109,8 @@ def irene(files_in, file_out, compression, event_range, print_mod, detector_db, 
                                           s1_lmax, s1_lmin, s1_rebin_stride, s1_stride, s1_tmax, s1_tmin,
                                           s2_lmax, s2_lmin, s2_rebin_stride, s2_stride, s2_tmax, s2_tmin,
                                           thr_sipm_s2),
-                              args = ("ccwfs", "ccwfs_rb", "s1_indices", "s2_indices", "sipm", "rebinned_times"),
+                              args = ("s1_ccwfs_rb", "s2_ccwfs_rb", "s1_indices", "s2_indices", "sipm",
+                                      "rebinned_s1_times", "rebinned_s2_times"),
                               out  = "pmap")
 
     ### Define data filters
@@ -143,9 +150,10 @@ def irene(files_in, file_out, compression, event_range, print_mod, detector_db, 
                                 print_every(print_mod),
                                 event_count_in.spy,
                                 rwf_to_cwf,
-                                first_rebin,
-                                cwf_to_ccwf,
-                                cwf_to_ccwf_rb,
+                                s1_rebin,
+                                s2_rebin,
+                                cwf_to_ccwf_s2rb,
+                                cwf_to_ccwf_s1rb,
                                 zero_suppress,
                                 indices_pass,
                                 fl.branch(write_indx_filter),
@@ -216,10 +224,12 @@ def build_pmaps(detector_db, run_number, pmt_sample_f, sipm_sample_f,
     datapmt = load_db.DataPMT(detector_db, run_number)
     pmt_ids = datapmt.SensorID[datapmt.Active.astype(bool)].values
 
-    def build_pmaps(ccwf_s1, ccwf_s2, s1_indx, s2_indx, sipmzs, rebinned_times): # -> PMap
+    def build_pmaps(ccwf_s1, ccwf_s2, s1_indx, s2_indx, sipmzs,
+                    rebinned_s1_times, rebinned_s2_times): # -> PMap
         return pkf.get_diff_pmaps(ccwf_s1, ccwf_s2, s1_indx, s2_indx, sipmzs,
                                   s1_params, s2_params, thr_sipm_s2, pmt_ids,
-                                  pmt_sample_f, sipm_sample_f, rebinned_times)
+                                  pmt_sample_f, sipm_sample_f,
+                                  rebinned_s1_times, rebinned_s2_times)
 
     return build_pmaps
 
