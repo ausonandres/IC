@@ -55,6 +55,57 @@ def hits_from_df (dst : pd.DataFrame, skip_NN : bool = False) -> Dict[int, HitCo
 
     return all_events
 
+
+def hits_from_df_new(dst : pd.DataFrame, skip_NN : bool = False) -> Dict[int, HitCollection]:
+    """
+    Function that transforms pandas DataFrame dst to HitCollection
+    ------
+    Parameters
+    ------
+    dst : pd.DataFrame
+        DataFrame with obligatory columns :
+                event, npeak, X, Y, Z,  Q, E
+        If time, nsipm, Xrms, Yrms, Qc, Ec, track_id are not
+        inside dst the default value is set to -1
+        If Xpeak, Ypeak not in dst the default value is -1000
+    ------
+    Returns
+    ------
+    Dictionary {event_number : HitCollection}
+    """
+    all_events = {}
+    for (event, time) , df in dst.groupby(['event',
+                                           getattr(dst,
+                                                  'time',
+                                                  [-1]*len(dst))]):
+        #pandas is not consistent with numpy dtypes so we have to change it by hand
+        event = np.int32(event)
+        hits  = []
+        for i, row in dst.iterrows():
+            if skip_NN and getattr(row,'Q', -1) == NN:
+                continue
+            hit = Hit(row.npeak,
+                      Cluster(getattr(row,'Q', row.E), xy(row.X, row.Y),
+                              xy(getattr(row, 'Xrms', 0)**2,      # for backwards compatibility
+                                 getattr(row, 'Yrms', 0)**2),     # for backwards compatibility
+                              nsipm = getattr(row, 'nsipm', -1),  # for backwards compatibility
+                              z     = row.Z,
+                              E     = row.E,
+                              Qc    = getattr(row, 'Qc', -1)),    # for backwards compatibility
+                      row.Z, row.E,
+                      xy(getattr(row, 'Xpeak', -1000),            # for backwards compatibility
+                         getattr(row, 'Ypeak', -1000)),           # for backwards compatibility
+                      s2_energy_c = getattr(row, 'Ec'      , -1), # for backwards compatibility
+                      track_id    = getattr(row, 'track_id', -1), # for backwards compatibility
+                      Ep          = getattr(row, "Ep"      , -1)) # for backwards compatibility
+
+            hits.append(hit)
+
+        if len(hits):
+            all_events[event] = HitCollection(event, time, hits=hits)
+
+    return all_events
+
 # reader
 def load_hits(DST_file_name : str, group_name : str = 'RECO', table_name : str = 'Events', skip_NN : bool = False
              )-> Dict[int, HitCollection]:

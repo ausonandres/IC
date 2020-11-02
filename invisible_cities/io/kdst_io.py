@@ -41,3 +41,19 @@ def psf_writer(hdf5_file, **kwargs):
                     row["nevt"  ] = nr[i,j,k]
                     row.append()
     return write_psf
+
+
+
+def kdst_from_df_writer(h5out, compression='ZLIB4'):
+    """
+    For a given open table returns a writer for KDST dataframe info
+    """
+    def write_kdst(df):
+        return df_writer(h5out              = h5out        ,
+                         df                 = df           ,
+                         compression        = compression  ,
+                         group_name         = 'DST'        ,
+                         table_name         = 'Events'     ,
+                         descriptive_string = 'KDST Events',
+                         columns_to_index   = ['event']    )
+    return write_kdst
