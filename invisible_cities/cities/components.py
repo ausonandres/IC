@@ -941,6 +941,8 @@ def track_blob_info_creator_extractor(vox_size         : [float, float, float],
         #track_hits is a new Hitcollection object that contains hits belonging to tracks, and hits that couldnt be corrected
         track_hitc = HitCollection(hitc.event, hitc.time)
         out_of_map = np.any(np.isnan([h.Ep for h in hitc.hits]))
+        #print('Event:', hitc.event)
+        #for h in hitc.hits: print('E:', h.E,'Ep:', h.Ep)
         if out_of_map:
             #add nan hits to track_hits, the track_id will be -1
             track_hitc.hits.extend  ([h for h in hitc.hits if np.isnan   (h.Ep)])
@@ -1079,11 +1081,16 @@ def copy_generalE_to_Ep_hit_attribute_(hitc : HitCollection) -> HitCollection:
     """
     mod_hits = []
     for hit in hitc.hits:
+        #print('before:', hit)
+        if hit.Ec==-1: e_to_copy = hit.E
+        else: e_to_copy = hit.Ec
         hit = Hit(hit.npeak,
                   Cluster(hit.Q, xy(hit.X, hit.Y), hit.var, hit.nsipm),
                   hit.Z, hit.E, xy(hit.Xpeak, hit.Ypeak),
-                  s2_energy_c = getattr(hit, 'Ec', hit.E),
-                  Ep          = getattr(hit, 'Ec', hit.E))
+                  s2_energy_c = e_to_copy,
+                  Ep          = e_to_copy)
+                  # Ep = geattr(hit, 'Ec', hit.E)
+        #print('after:', hit)
         mod_hits.append(hit)
     mod_hitc = HitCollection(hitc.event, hitc.time, hits=mod_hits)
     return mod_hitc
@@ -1172,6 +1179,6 @@ def compute_and_write_tracks_info(paolina_params, h5out):
                events_passed_topology.   filter            ,
                fl.branch(write_tracks)                     )
 
-    compute_tracks = pipe(fn_list)
+    compute_tracks = pipe(*fn_list)
 
     return compute_tracks
