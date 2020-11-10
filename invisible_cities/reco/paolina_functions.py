@@ -155,8 +155,31 @@ def find_extrema_and_length(distance : Dict[Voxel, Dict[Voxel, float]]) -> Tuple
     first, last, max_distance = None, None, 0
     for (voxel1, dist_from_voxel_1_to), (voxel2, _) in combinations(distance.items(), 2):
         d = dist_from_voxel_1_to[voxel2]
-        if d > max_distance:
+        if d >= max_distance:
             first, last, max_distance = voxel1, voxel2, d
+    #
+    first_voxels = []
+    last_voxels = []
+    for (voxel1, dist_from_voxel_1_to), (voxel2, _) in combinations(distance.items(), 2):
+        d = dist_from_voxel_1_to[voxel2]
+        if d >= max_distance:
+
+            first, last, max_distance = voxel1, voxel2, d
+            first_voxels.append(first)
+            last_voxels.append(last)
+
+    maxE = 0
+    for ii, vox in enumerate(first_voxels):
+        sumE = first_voxels[ii].E + last_voxels[ii].E
+        if sumE>maxE:
+            maxE=sumE
+            i_to_save = ii
+    first = first_voxels[i_to_save]
+    last = last_voxels[i_to_save]
+    #
+    if last.E>first.E:
+        first, last = last, first
+
     return first, last, max_distance
 
 
