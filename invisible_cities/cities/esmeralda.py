@@ -38,6 +38,7 @@ from .  components import collect
 from .  components import copy_mc_info
 from .  components import hits_and_kdst_from_files
 from .  components import compute_and_write_tracks_info
+from .  components import copy_E_or_Ec_to_Ep
 
 from .. types.      ic_types import xy
 
@@ -192,16 +193,23 @@ def esmeralda(files_in, file_out, compression, event_range, print_mod,
 
     threshold_and_correct_hits_high = fl.map(hits_threshold_and_corrector(threshold_charge=cor_hits_params['threshold_charge_high'], **cor_hits_params_),
                                              args = 'hits',
-                                             out  = 'hits')
+                                             out  = 'cor_high_th_hits')
+
 
     filter_events_low_th            = fl.map(lambda x : len(x.hits) > 0,
                                              args = 'cor_low_th_hits',
                                              out  = 'low_th_hits_passed')
+    filter_events_high_th           = fl.map(lambda x : len(x.hits) > 0,
+                                             args = 'cor_high_th_hits',
+                                             out  = 'high_th_hits_passed')
 
     hits_passed_low_th              = fl.count_filter(bool, args="low_th_hits_passed")
+    hits_passed_high_th             = fl.count_filter(bool, args="high_th_hits_passed")
 
+    copy_Ec_to_Ep_hit_attribute     = fl.map(copy_E_or_Ec_to_Ep(evm.HitEnergy.Ec),
+                                             args = 'cor_high_th_hits',
+                                             out  = 'Ep_hits')
 
-    ##compute_tracks = compute_and_write_tracks_info(paolina_params, h5out) ##### inside 'with'
 
     event_count_in  = fl.spy_count()
     event_count_out = fl.spy_count()
@@ -220,7 +228,7 @@ def esmeralda(files_in, file_out, compression, event_range, print_mod,
 
         #write_tracks          = fl.sink(   track_writer     (h5out=h5out)                , args="topology_info"      )
         #write_summary         = fl.sink( summary_writer     (h5out=h5out)                , args="event_info"         )
-        #write_high_th_filter  = fl.sink( event_filter_writer(h5out, "high_th_select" )   , args=("event_number", "high_th_hits_passed"))
+        write_high_th_filter  = fl.sink( event_filter_writer(h5out, "high_th_select" )   , args=("event_number", "high_th_hits_passed"))
         write_low_th_filter   = fl.sink( event_filter_writer(h5out, "low_th_select"  )   , args=("event_number", "low_th_hits_passed" ))
         #write_topology_filter = fl.sink( event_filter_writer(h5out, "topology_select")   , args=("event_number", "topology_passed"    ))
         write_kdst_table      = fl.sink( kdst_from_df_writer(h5out)                      , args="kdst"               )
@@ -240,9 +248,13 @@ def esmeralda(files_in, file_out, compression, event_range, print_mod,
                                               hits_passed_low_th.filter           ,
                                               write_hits_low_th                  ),
                                     threshold_and_correct_hits_high               ,
+                                    filter_events_high_th                         ,
+                                    fl.branch(write_high_th_filter)               ,
+                                    hits_passed_high_th   .filter                 ,
+                                    copy_Ec_to_Ep_hit_attribute                   ,
                                     compute_tracks                                ,
-                                    fl.branch(write_hits_paolina)                 ,
-                                    event_count_out       .spy                   ),
+                                    event_count_out       .spy                    ,
+                                    write_hits_paolina                           ),
                       result = dict(events_in  =event_count_in .future,
                                     events_out =event_count_out.future,
                                     evtnum_list=evtnum_collect .future))

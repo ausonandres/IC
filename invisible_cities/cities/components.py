@@ -941,8 +941,6 @@ def track_blob_info_creator_extractor(vox_size         : [float, float, float],
         #track_hits is a new Hitcollection object that contains hits belonging to tracks, and hits that couldnt be corrected
         track_hitc = HitCollection(hitc.event, hitc.time)
         out_of_map = np.any(np.isnan([h.Ep for h in hitc.hits]))
-        #print('Event:', hitc.event)
-        #for h in hitc.hits: print('E:', h.E,'Ep:', h.Ep)
         if out_of_map:
             #add nan hits to track_hits, the track_id will be -1
             track_hitc.hits.extend  ([h for h in hitc.hits if np.isnan   (h.Ep)])
@@ -956,6 +954,7 @@ def track_blob_info_creator_extractor(vox_size         : [float, float, float],
             (    mod_voxels,
              dropped_voxels) = plf.drop_end_point_voxels(voxels, energy_threshold, min_voxels)
             tracks           = plf.make_track_graphs(mod_voxels)
+            #print('Mod. voxels: ', len(mod_voxels), '-- dropped_voxels: ',len(dropped_voxels))
 
             for v in dropped_voxels:
                 track_hitc.hits.extend(v.hits)
@@ -972,6 +971,7 @@ def track_blob_info_creator_extractor(vox_size         : [float, float, float],
                 tID = c
                 energy = plf.get_track_energy(t)
                 length = plf.length(t)
+                #print('Track energy: ', energy, '-- Track length: ', length)
                 numb_of_hits   = len([h for vox in t.nodes() for h in vox.hits])
                 numb_of_voxels = len(t.nodes())
                 numb_of_tracks = len(tracks   )
@@ -1096,6 +1096,23 @@ def copy_generalE_to_Ep_hit_attribute_(hitc : HitCollection) -> HitCollection:
     return mod_hitc
 
 
+def copy_E_or_Ec_to_Ep(energy_type: HitEnergy):
+    def copy_energy_to_Ep_hit_attribute_(hitc : HitCollection) -> HitCollection:
+        mod_hits = []
+        for hit in hitc.hits:
+            hit = Hit(hit.npeak,
+                      Cluster(hit.Q, xy(hit.X, hit.Y), hit.var, hit.nsipm),
+                      hit.Z,
+                      hit.E,
+                      xy(hit.Xpeak, hit.Ypeak),
+                      s2_energy_c=getattr(hit, energy_type.value),
+                      Ep=getattr(hit, energy_type.value))
+            mod_hits.append(hit)
+        mod_hitc = HitCollection(hitc.event, hitc.time, hits=mod_hits)
+        return mod_hitc
+    return copy_energy_to_Ep_hit_attribute_
+
+
 
 
 def track_writer(h5out, compression='ZLIB4'):
@@ -1133,15 +1150,15 @@ def summary_writer(h5out, compression='ZLIB4'):
 def compute_and_write_tracks_info(paolina_params, h5out):
 
     # Filter events without hits
-    filter_events_nohits           = fl.map(lambda x : len(x.hits) > 0,
-                                            args = 'hits',
-                                            out  = 'hits_passed')
-    hits_passed                    = fl.count_filter(bool, args="hits_passed")
+    #filter_events_nohits           = fl.map(lambda x : len(x.hits) > 0,
+    #                                        args = 'hits',
+    #                                        out  = 'hits_passed')
+    #hits_passed                    = fl.count_filter(bool, args="hits_passed")
 
     # Add Ep variable from E, to compute tracks
-    copy_E_to_Ep_hit_attribute     = fl.map(copy_generalE_to_Ep_hit_attribute_,
-                                            args = 'hits',
-                                            out  = 'Ep_hits')
+    #copy_E_to_Ep_hit_attribute     = fl.map(copy_generalE_to_Ep_hit_attribute_,
+    #                                        args = 'hits',
+    #                                        out  = 'Ep_hits')
 
 
     # Create tracks and compute topology-related information
@@ -1164,14 +1181,14 @@ def compute_and_write_tracks_info(paolina_params, h5out):
     # Define writers and make them sinks
     write_tracks          = fl.sink(   track_writer     (h5out=h5out)             , args="topology_info"      )
     write_summary         = fl.sink( summary_writer     (h5out=h5out)             , args="event_info"         )
-    write_no_hits_filter  = fl.sink( event_filter_writer(h5out, "hits_select" )   , args=("event_number", "hits_passed"))
+    #write_no_hits_filter  = fl.sink( event_filter_writer(h5out, "hits_select" )   , args=("event_number", "hits_passed"))
     write_topology_filter = fl.sink( event_filter_writer(h5out, "topology_select"), args=("event_number", "topology_passed"    ))
     
     
-    fn_list = (filter_events_nohits                        ,
-               fl.branch(write_no_hits_filter)             ,
-               hits_passed.              filter            ,
-               copy_E_to_Ep_hit_attribute                  ,
+    fn_list = (#filter_events_nohits                        ,
+               #fl.branch(write_no_hits_filter)             ,
+               #hits_passed.              filter            ,
+               #copy_E_to_Ep_hit_attribute                  ,
                create_extract_track_blob_info              ,
                filter_events_topology                      ,
                fl.branch(make_final_summary, write_summary),

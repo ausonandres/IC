@@ -26,9 +26,13 @@ from .  components import copy_mc_info
 from .  components import hits_and_kdst_from_files
 from .  components import dhits_from_files
 from .  components import compute_and_write_tracks_info
+from .  components import copy_E_or_Ec_to_Ep
+
+from ..  evm.event_model import HitEnergy
 
 from ..  io.run_and_event_io import run_and_event_writer
 from ..  io.         kdst_io import  kdst_from_df_writer
+from ..  io.event_filter_io  import  event_filter_writer
 
 
 
@@ -88,13 +92,24 @@ def isaura(files_in, file_out, compression, event_range, print_mod,
     with tb.open_file(file_out, "w", filters=tbl.filters(compression)) as h5out:
 
         write_event_info = fl.sink(run_and_event_writer(h5out), args=("run_number", "event_number", "timestamp"))
-        
         #write_kdst_table      = fl.sink( kdst_from_df_writer(h5out)                      , args="kdst"               )
+        write_no_hits_filter  = fl.sink( event_filter_writer(h5out, "hits_select" )   , args=("event_number", "hits_passed"))
 
         evtnum_collect = collect()
         
+        # Filter events without hits
+        filter_events_nohits = fl.map(lambda x : len(x.hits) > 0,
+                                      args = 'hits',
+                                      out  = 'hits_passed')
+        hits_passed          = fl.count_filter(bool, args="hits_passed")
+
+
+        copy_E_to_Ep_hit_attribute = fl.map(copy_E_or_Ec_to_Ep(HitEnergy.E),
+                                            args = 'hits',
+                                            out  = 'Ep_hits')
+
         compute_tracks = compute_and_write_tracks_info(paolina_params, h5out)
-        
+
         result = push(source = dhits_from_files(files_in),
                       #source = hits_and_kdst_from_files(files_in),
                       pipe   = pipe(fl.slice(*event_range, close_all=True)        ,
@@ -103,6 +118,10 @@ def isaura(files_in, file_out, compression, event_range, print_mod,
                                     #fl.branch(fl.fork(write_kdst_table            ,
                                     #                  write_event_info          )),
                                     fl.branch("event_number", evtnum_collect.sink),
+                                    filter_events_nohits                          ,
+                                    fl.branch(write_no_hits_filter)               ,
+                                    hits_passed.              filter              ,
+                                    copy_E_to_Ep_hit_attribute                    ,
                                     compute_tracks                                ,
                                     event_count_out       .spy                    ,
                                     write_event_info                              ),

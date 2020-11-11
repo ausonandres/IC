@@ -2,6 +2,7 @@ from .  table_io import make_table
 from .. evm.nh5  import KrTable
 from .. evm.nh5  import PSFfactors
 
+from .. io.dst_io import df_writer
 
 def kr_writer(hdf5_file, *, compression='ZLIB4'):
     kr_table = make_table(hdf5_file,
