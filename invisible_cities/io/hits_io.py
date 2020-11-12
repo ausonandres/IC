@@ -21,8 +21,9 @@ def hits_from_df (dst : pd.DataFrame, skip_NN : bool = False) -> Dict[int, HitCo
     ------
     dst : pd.DataFrame
         DataFrame with obligatory columns :
-                event, time, npeak, nsipm, X, Y, Xrms, Yrms, Z,  Q, E
-        If Qc, Ec, track_id are not inside dst the default value is set to -1
+                event, npeak, X, Y, Z,  Q, E
+        If time, nsipm, Xrms, Yrms, Qc, Ec, track_id are not
+        inside dst the default value is set to -1
         If Xpeak, Ypeak not in dst the default value is -1000
     ------
     Returns
@@ -30,17 +31,24 @@ def hits_from_df (dst : pd.DataFrame, skip_NN : bool = False) -> Dict[int, HitCo
     Dictionary {event_number : HitCollection}
     """
     all_events = {}
-    for (event, time) , hits_df in dst.groupby(['event', 'time']):
+    for (event, time) , df in dst.groupby(['event',
+                                           getattr(dst,
+                                                   'time',
+                                                   [-1]*len(dst))]):
         #pandas is not consistent with numpy dtypes so we have to change it by hand
         event = np.int32(event)
         hits  = []
-        for i, row in hits_df.iterrows():
-            if skip_NN and row.Q == NN:
+        for i, row in df.iterrows():
+            if skip_NN and getattr(row,'Q', -1) == NN:
                 continue
             hit = Hit(row.npeak,
-                      Cluster(row.Q, xy(row.X, row.Y), xy(row.Xrms**2, row.Yrms**2),
-                              row.nsipm, row.Z, row.E,
-                              Qc = getattr(row, 'Qc', -1)),       # for backwards compatibility
+                      Cluster(getattr(row,'Q', row.E), xy(row.X, row.Y),
+                              xy(getattr(row, 'Xrms', 0)**2,      # for backwards compatibility
+                                 getattr(row, 'Yrms', 0)**2),     # for backwards compatibility
+                              nsipm = getattr(row, 'nsipm', -1),  # for backwards compatibility
+                              z     = row.Z,
+                              E     = row.E,
+                              Qc    = getattr(row, 'Qc', -1)),    # for backwards compatibility
                       row.Z, row.E,
                       xy(getattr(row, 'Xpeak', -1000),            # for backwards compatibility
                          getattr(row, 'Ypeak', -1000)),           # for backwards compatibility
