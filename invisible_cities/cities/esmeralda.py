@@ -37,7 +37,7 @@ from .  components import print_every
 from .  components import collect
 from .  components import copy_mc_info
 from .  components import hits_and_kdst_from_files
-from .  components import copy_Ec_to_Ep_hit_attribute_
+from .  components import copy_E_or_Ec_to_Ep
 from .  components import compute_and_write_tracks_info
 
 from .. types.      ic_types import xy
@@ -204,7 +204,7 @@ def esmeralda(files_in, file_out, compression, event_range, print_mod,
     hits_passed_low_th              = fl.count_filter(bool, args="low_th_hits_passed")
     hits_passed_high_th             = fl.count_filter(bool, args="high_th_hits_passed")
 
-    copy_Ec_to_Ep_hit_attribute     = fl.map(copy_Ec_to_Ep_hit_attribute_,
+    copy_Ec_to_Ep_hit_attribute     = fl.map(copy_E_or_Ec_to_Ep(evm.HitEnergy.Ec),
                                              args = 'cor_high_th_hits',
                                              out  = 'Ep_hits')
 
