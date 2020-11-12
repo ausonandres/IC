@@ -835,18 +835,21 @@ def compute_and_write_pmaps(detector_db, run_number, pmt_samp_wid, sipm_samp_wid
 
 
 
-
-def copy_Ec_to_Ep_hit_attribute_(hitc : HitCollection) -> HitCollection:
-    """
-    The functions copies values of Ec attributes into Ep attributes. Takes as input HitCollection and returns a copy.
-    """
-    mod_hits = []
-    for hit in hitc.hits:
-        hit = Hit(hit.npeak, Cluster(hit.Q, xy(hit.X, hit.Y), hit.var, hit.nsipm),
-                  hit.Z, hit.E, xy(hit.Xpeak, hit.Ypeak), s2_energy_c=hit.Ec, Ep=hit.Ec)
-        mod_hits.append(hit)
-    mod_hitc = HitCollection(hitc.event, hitc.time, hits=mod_hits)
-    return mod_hitc
+def copy_E_or_Ec_to_Ep(energy_type: HitEnergy):
+    def copy_energy_to_Ep_hit_attribute_(hitc : HitCollection) -> HitCollection:
+        mod_hits = []
+        for hit in hitc.hits:
+            hit = Hit(hit.npeak,
+                      Cluster(hit.Q, xy(hit.X, hit.Y), hit.var, hit.nsipm),
+                      hit.Z,
+                      hit.E,
+                      xy(hit.Xpeak, hit.Ypeak),
+                      s2_energy_c=getattr(hit, energy_type.value),
+                      Ep=getattr(hit, energy_type.value))
+            mod_hits.append(hit)
+        mod_hitc = HitCollection(hitc.event, hitc.time, hits=mod_hits)
+        return mod_hitc
+    return copy_energy_to_Ep_hit_attribute_
 
 
 types_dict_summary = OrderedDict({'event'     : np.int32  , 'evt_energy' : np.float64, 'evt_charge'    : np.float64,
