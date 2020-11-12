@@ -498,6 +498,32 @@ def hits_and_kdst_from_files(paths: List[str]) -> Iterator[Dict[str,Union[HitCol
                            timestamp = timestamp)
 
 
+def dhits_from_files(paths: List[str]) -> Iterator[Dict[str,Union[HitCollection, pd.DataFrame, MCInfo, int, float]]]:
+    """Reader of the files, yields HitsCollection, pandas DataFrame with
+    run_number, event_number and timestamp."""
+    for path in paths:
+        try:
+            dhits_df = load_dst (path, 'DECO', 'Events')
+        except tb.exceptions.NoSuchNodeError:
+            continue
+
+        with tb.open_file(path, "r") as h5in:
+            try:
+                run_number  = get_run_number(h5in)
+                event_info  = get_event_info(h5in)
+            except (tb.exceptions.NoSuchNodeError, IndexError):
+                continue
+            check_lengths(event_info, dhits_df.event.unique())
+
+            for evtinfo in event_info:
+                event_number, timestamp = evtinfo.fetch_all_fields()
+                dhits = hits_from_df(dhits_df.loc[dhits_df.event == event_number])
+                yield dict(hits = dhits[event_number],
+                           run_number = run_number,
+                           event_number = event_number,
+                           timestamp = timestamp)
+
+
 def sensor_data(path, wf_type):
     with tb.open_file(path, "r") as h5in:
         if   wf_type is WfType.rwf :   (pmt_wfs, sipm_wfs) = (h5in.root.RD .pmtrwf,   h5in.root.RD .sipmrwf)
